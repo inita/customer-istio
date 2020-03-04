@@ -1,6 +1,6 @@
 package com.redhat.developer.demos.customer;
 
-//import io.opentracing.Tracer;
+import io.opentracing.Tracer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,6 +15,7 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestClientException;
@@ -22,6 +23,7 @@ import org.springframework.web.client.RestTemplate;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.Enumeration;
+import java.util.Random;
 
 @RestController
 public class CustomerController {
@@ -33,18 +35,22 @@ public class CustomerController {
     @Autowired
     private final RestTemplate restTemplate;
 
+    private static final String[] names = {"Harry Potter", "Hermione Granger", "Lord Voldemort", "Draco Malfoy", "Ron Weasley",
+            "Severus Snape", "Sirius Black", "Albus Dumbledore", "Rubeus Hagrid", "Ginny Weasley"};
+    private static final String[] addresses = {"1800 Sunset Bvd, Los Angeles", "200 5h Ave, New York City", "1600 Pennsylvania Ave NW, Washington DC"};
+
     @Value("${preferences.api.url:http://preference:8080}")
     private String remoteURL;
 
-//    @Autowired
-//    private Tracer tracer;
+    @Autowired
+    private Tracer tracer;
 
     public CustomerController(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
     }
 
-    @RequestMapping("/")
-    public ResponseEntity<String> getCustomer(HttpServletRequest httpServletRequest, @RequestHeader("User-Agent") String userAgent, @RequestHeader(value = "user-preference", required = false) String userPreference,
+    @RequestMapping(value = "/customer",  method = RequestMethod.GET)
+    public ResponseEntity<Customer> getCustomer(HttpServletRequest httpServletRequest, @RequestHeader("User-Agent") String userAgent, @RequestHeader(value = "user-preference", required = false) String userPreference,
                                               HttpServletRequest request) throws Exception {
         try {
 
@@ -68,17 +74,27 @@ public class CustomerController {
                     String.class);
 
             String response = entity.getBody();
-            return ResponseEntity.ok(String.format(RESPONSE_STRING_FORMAT, response.trim()));
+
+            ResponseEntity<Preference> responseEntity = restTemplate.getForEntity(remoteURL, Preference.class);
+            Preference preferenceResponse = responseEntity.getBody();
+            Customer customer = new Customer();
+
+            Random rand = new Random();
+            Integer id = rand.nextInt(1000000);
+            customer.setId(id);
+            String name = names[id % 10];
+            customer.setName(name);
+            String address = addresses[id % 3];
+            customer.setAddress(address);
+            customer.setPreference(preferenceResponse);
+
+            return ResponseEntity.ok(customer);
         } catch (HttpStatusCodeException ex) {
             logger.warn("Exception trying to get the response from preference service.", ex);
-
-            return ResponseEntity.status(ex.getRawStatusCode() == HttpStatus.UNAUTHORIZED.value() ? HttpStatus.OK : HttpStatus.SERVICE_UNAVAILABLE)
-                    .body(String.format(RESPONSE_STRING_FORMAT,
-                            String.format("%d %s", ex.getRawStatusCode(), createHttpErrorResponseString(ex))));
+            return new ResponseEntity(HttpStatus.BAD_REQUEST);
         } catch (RestClientException ex) {
             logger.warn("Exception trying to get the response from preference service.", ex);
-            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-                    .body(String.format(RESPONSE_STRING_FORMAT, ex.getMessage()));
+            return new ResponseEntity(HttpStatus.BAD_REQUEST);
         }
     }
 
