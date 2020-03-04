@@ -69,14 +69,11 @@ public class CustomerController {
             MultiValueMap<String, String> headers = new LinkedMultiValueMap<>();
             String header = httpServletRequest.getHeader("x-api-key");
             headers.add("x-api-key", header);
-            ResponseEntity<String> entity = restTemplate.exchange(
+            ResponseEntity<Preference> entity = restTemplate.exchange(
                     remoteURL, HttpMethod.GET, new HttpEntity<>(headers),
-                    String.class);
+                    Preference.class);
 
-            String response = entity.getBody();
-
-            ResponseEntity<Preference> responseEntity = restTemplate.getForEntity(remoteURL, Preference.class);
-            Preference preferenceResponse = responseEntity.getBody();
+            Preference preferenceResponse = entity.getBody();
             Customer customer = new Customer();
 
             Random rand = new Random();
