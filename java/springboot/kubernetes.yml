@@ -16,11 +16,11 @@ spec:
         app: customer
     spec:
       containers:
-      - name: customer
-        image: gcr.io/dev1-onb-playground-18fd/customer:latest
-        ports:
-        - containerPort: 8080
-        imagePullPolicy: Always
+        - name: customer
+          image: gcr.io/cirrus-initial-project/customer:latest
+          ports:
+            - containerPort: 8080
+          imagePullPolicy: Always
 ---
 apiVersion: v1
 kind: Service
@@ -28,11 +28,11 @@ metadata:
   name: customer
   namespace: istio-demo
   labels:
-    app: customer    
+    app: customer
 spec:
   ports:
-  - name: http
-    port: 8080
+    - name: http
+      port: 8080
   selector:
     app: customer
   type: LoadBalancer
